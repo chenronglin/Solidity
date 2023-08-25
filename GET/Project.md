@@ -70,8 +70,6 @@ contract GreenEcoToken is ERC20, Ownable {
 
 以下是一个使用 OpenZeppelin 实现的简单 ICO 合约示例，实现了上述ICO合约的主要功能：
 
-你可以通过在购买代币的函数中添加购买限制来实现这个功能。以下是修改后的合约代码，已经加入了限制每个用户购买代币的上限功能：
-
 ```solidity
 // SPDX-License-Identifier: GPL-3.0
 
