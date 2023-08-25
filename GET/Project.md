@@ -15,7 +15,7 @@
 
 
 
-#### ICO合约通常主要功能：
+#### ICO合约主要功能：
 
 1. **代币销售机制：** 定义用于购买代币的机制，通常涉及以太币或其他加密货币的支付。这可能包括确定代币价格、购买数量等。
 
@@ -27,15 +27,17 @@
 
 5. **事件通知：** 向投资者发送相关事件的通知，例如购买成功、代币分发等。
 
-7. **所有权和余额管理：** 管理ICO合约的所有者，允许其执行特定操作，如提款和合约设置更改。
+6. **所有权和余额管理：** 管理ICO合约的所有者，允许其执行特定操作，如提款和合约设置更改。
 
-8. **数据追踪：** 跟踪已售出的代币数量，确保在ICO结束后没有额外的代币被销售。
+7. **数据追踪：** 跟踪已售出的代币数量，确保在ICO结束后没有额外的代币被销售。
 
-9. **中止和恢复机制：** 为了应对安全问题或其他问题，可能需要添加中止和恢复合约的功能。
+8. **中止和恢复机制：** 为了应对安全问题或其他问题，可能需要添加中止和恢复合约的功能。
 
 9. **数据查询：** 允许用户查询代币的当前价格、余额和其他与ICO相关的信息。
 
-   
+10.  **购买限额** : 限制单个用户最多购买数量。
+
+    
 
 #### 代币合约实现：
 
@@ -68,6 +70,8 @@ contract GreenEcoToken is ERC20, Ownable {
 
 以下是一个使用 OpenZeppelin 实现的简单 ICO 合约示例，实现了上述ICO合约的主要功能：
 
+你可以通过在购买代币的函数中添加购买限制来实现这个功能。以下是修改后的合约代码，已经加入了限制每个用户购买代币的上限功能：
+
 ```solidity
 // SPDX-License-Identifier: GPL-3.0
 
@@ -77,7 +81,7 @@ pragma solidity ^0.8.0;
 // 导入 OpenZeppelin 的合约库
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 // 定义 ICO 合约
 contract ICO is Ownable, ReentrancyGuard {
@@ -87,6 +91,7 @@ contract ICO is Ownable, ReentrancyGuard {
     uint256 public minTokensToSell; // 最少售出的代币数量
     uint256 public maxTokensToSell; // 最多售出的代币数量
     uint256 public targetFunding;   // 目标募资金额
+    uint256 public maxPurchaseAmount; // 每个用户购买的最大代币数量（以 tokenPrice 为单位）
     bool public isICOActive;       // ICO 是否激活状态
 
     event TokensPurchased(address indexed buyer, uint256 amount);
@@ -96,13 +101,15 @@ contract ICO is Ownable, ReentrancyGuard {
         uint256 _tokenPrice,
         uint256 _minTokensToSell,
         uint256 _maxTokensToSell,
-        uint256 _targetFunding
+        uint256 _targetFunding,
+        uint256 _maxPurchaseAmount
     ) {
         tokenContract = IERC20(_tokenContract);  // 初始化代币合约地址
         tokenPrice = _tokenPrice;  // 初始化代币价格
         minTokensToSell = _minTokensToSell;  // 初始化最少售出代币数量
         maxTokensToSell = _maxTokensToSell;  // 初始化最多售出代币数量
         targetFunding = _targetFunding;      // 初始化目标募资金额
+        maxPurchaseAmount = _maxPurchaseAmount; // 初始化每个用户购买的最大代币数量
         isICOActive = true;  // 初始化 ICO 激活状态
     }
 
@@ -118,6 +125,7 @@ contract ICO is Ownable, ReentrancyGuard {
         require(msg.value == _numberOfTokens * tokenPrice, "Incorrect value sent");  // 确保发送的以太币金额正确
         require(tokensSold + _numberOfTokens <= maxTokensToSell, "Exceeds available tokens for sale");  // 确保不超过最多售出代币数量
         require(address(this).balance <= targetFunding, "Exceeds target funding");  // 确保不超过目标募资金额
+        require(_numberOfTokens <= maxPurchaseAmount, "Exceeds max purchase amount per user"); // 确保不超过每个用户的最大购买数量
 
         tokensSold += _numberOfTokens;  // 更新已售出代币数量
         tokenContract.transfer(msg.sender, _numberOfTokens);  // 转移代币给购买者
@@ -153,4 +161,8 @@ contract ICO is Ownable, ReentrancyGuard {
     }
 }
 ```
+
+我们使用 OpenZeppelin 的 `ReentrancyGuard` 合约来防止重入攻击。
+
+补充购买限额需求：添加了一个名为 `maxPurchaseAmount` 的变量，用于设置每个用户购买的最大代币数量。在 `buyTokens` 函数中，我添加了一个新的 `require` 条件，确保购买数量不超过这个最大值。这样就限制了每个用户购买代币的上限为 `maxPurchaseAmount`。
 
